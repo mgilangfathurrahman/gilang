@@ -1,9 +1,4 @@
 <?php
-// Menampilkan pesan error jika terjadi kesalahan sistem
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
-
-// Cek status login dari Cookie
 if (!isset($_COOKIE['admin_logged_in']) || $_COOKIE['admin_logged_in'] !== 'true') {
     header("Location: login.php");
     exit;
@@ -13,14 +8,12 @@ require 'koneksi.php';
 
 $pesan = "";
 
-// Proses Buat Pesanan Baru
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $nama_pembeli = trim($_POST['nama_pembeli']);
-    $produk_id    = $_POST['produk_id'];
+    $produk_id    = (int) $_POST['produk_id'];
     $jumlah       = (int) $_POST['jumlah'];
 
     try {
-        // Ambil harga dan stok produk saat ini
         $stmt = $pdo->prepare("SELECT harga, stok FROM produk WHERE id = :id");
         $stmt->execute([':id' => $produk_id]);
         $produk = $stmt->fetch();
@@ -28,7 +21,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($produk && $produk['stok'] >= $jumlah && $jumlah > 0) {
             $total_harga = $produk['harga'] * $jumlah;
 
-            // 1. Simpan ke tabel pesanan
             $ins = $pdo->prepare("INSERT INTO pesanan (nama_pembeli, produk_id, jumlah, total_harga) VALUES (:pembeli, :pid, :jml, :total)");
             $ins->execute([
                 ':pembeli' => $nama_pembeli,
@@ -37,7 +29,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ':total'   => $total_harga
             ]);
 
-            // 2. Kurangi stok di tabel produk
             $upd = $pdo->prepare("UPDATE produk SET stok = stok - :jml WHERE id = :pid");
             $upd->execute([
                 ':jml' => $jumlah,
@@ -54,7 +45,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Ambil daftar produk yang stoknya tersedia & riwayat pesanan
 try {
     $produk_tersedia = $pdo->query("SELECT * FROM produk WHERE stok > 0 ORDER BY nama_produk ASC")->fetchAll();
     
@@ -71,6 +61,7 @@ try {
 <html lang="id">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kelola Pesanan - Toko Gilang</title>
     <style>
         body { font-family: sans-serif; margin: 20px 40px; }
@@ -80,9 +71,8 @@ try {
         th { background: #24b47e; color: white; }
         form input, select, button { padding: 8px; margin-right: 5px; }
         button { background: #24b47e; color: white; border: none; cursor: pointer; font-weight: bold; }
-        .alert { padding: 10px; margin: 15px 0; border-radius: 5px; }
-        .alert-ok { background: #e6f7f0; color: #24b47e; }
-        .alert-err { background: #ffe6e6; color: #d93025; }
+        .alert-ok { background: #e6f7f0; color: #24b47e; padding: 10px; margin: 15px 0; border-radius: 5px; }
+        .alert-err { background: #ffe6e6; color: #d93025; padding: 10px; margin: 15px 0; border-radius: 5px; }
     </style>
 </head>
 <body>
@@ -97,14 +87,14 @@ try {
     <h2>Catat Pesanan Baru</h2>
 
     <?php if (isset($_GET['status']) && $_GET['status'] === 'sukses'): ?>
-        <div class="alert alert-ok">Pesanan berhasil dicatat dan stok produk otomatis berkurang!</div>
+        <div class="alert-ok">Pesanan berhasil dicatat dan stok produk otomatis berkurang!</div>
     <?php endif; ?>
 
     <?php if (!empty($pesan)): ?>
-        <div class="alert alert-err"><?= htmlspecialchars($pesan) ?></div>
+        <div class="alert-err"><?= htmlspecialchars($pesan) ?></div>
     <?php endif; ?>
 
-    <form method="POST">
+    <form method="POST" action="">
         <input type="text" name="nama_pembeli" placeholder="Nama Pembeli" required>
         <select name="produk_id" required>
             <option value="">-- Pilih Produk --</option>
